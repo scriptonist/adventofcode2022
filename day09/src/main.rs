@@ -3,6 +3,7 @@ use std::collections::HashSet;
 fn main() {
     let input = include_str!("input.txt");
     println!("{}", p1(input));
+    println!("{}", p2(input));
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -83,23 +84,23 @@ impl Pos {
 }
 struct Rope {
     head: Pos,
-    tail: Pos,
+    knots: Vec<Pos>,
     tail_pos: Vec<Pos>,
 }
 
 impl Rope {
-    pub fn new() -> Self {
+    pub fn new(knots_count: usize) -> Self {
         Self {
             head: Pos { x: 0, y: 0 },
-            tail: Pos { x: 0, y: 0 },
+            knots: vec![Pos { x: 0, y: 0 }; knots_count],
             tail_pos: vec![Pos { x: 0, y: 0 }],
         }
     }
     pub fn mov(&mut self, mov: Move) {
         for _ in 0..mov.count {
             self.mov_head(&mov.direction);
-            self.mov_tail();
-            self.tail_pos.push(self.tail);
+            self.mov_tails();
+            self.tail_pos.push(self.knots[self.knots.len() - 1]);
         }
     }
 
@@ -111,23 +112,29 @@ impl Rope {
             Direction::Left => self.head.left(-1),
         }
     }
-    fn mov_tail(&mut self) {
-        if self.head.is_one_apart_left(&self.tail) {
-            self.tail.left(-1);
-        } else if self.head.is_one_apart_right(&self.tail) {
-            self.tail.right(1);
-        } else if self.head.is_one_apart_up(&self.tail) {
-            self.tail.up(1);
-        } else if self.head.is_one_apart_down(&self.tail) {
-            self.tail.down(-1);
-        } else if self.head.is_up_row_right(&self.tail) {
-            self.tail.jump_up_right_diag()
-        } else if self.head.is_up_row_left(&self.tail) {
-            self.tail.jump_up_left_diag()
-        } else if self.head.is_down_row_right(&self.tail) {
-            self.tail.jump_down_right_diag()
-        } else if self.head.is_down_row_left(&self.tail) {
-            self.tail.jump_down_left_diag()
+    fn mov_tails(&mut self) {
+        let mut head = self.head;
+        for tail_idx in 0..self.knots.len() {
+            let mut tail = self.knots[tail_idx];
+            if head.is_one_apart_left(&tail) {
+                tail.left(-1);
+            } else if head.is_one_apart_right(&tail) {
+                tail.right(1);
+            } else if head.is_one_apart_up(&tail) {
+                tail.up(1);
+            } else if head.is_one_apart_down(&tail) {
+                tail.down(-1);
+            } else if head.is_up_row_right(&tail) {
+                tail.jump_up_right_diag()
+            } else if head.is_up_row_left(&tail) {
+                tail.jump_up_left_diag()
+            } else if head.is_down_row_right(&tail) {
+                tail.jump_down_right_diag()
+            } else if head.is_down_row_left(&tail) {
+                tail.jump_down_left_diag()
+            }
+            self.knots[tail_idx] = tail;
+            head = self.knots[tail_idx];
         }
     }
 }
@@ -164,7 +171,16 @@ fn parse_input(input: &str) -> Vec<Move> {
 
 fn p1(input: &str) -> i32 {
     let moves = parse_input(input);
-    let mut rope = Rope::new();
+    let mut rope = Rope::new(1);
+    for mov in moves {
+        rope.mov(mov);
+    }
+    rope.tail_pos.iter().collect::<HashSet<&Pos>>().len() as i32
+}
+
+fn p2(input: &str) -> i32 {
+    let moves = parse_input(input);
+    let mut rope = Rope::new(9);
     for mov in moves {
         rope.mov(mov);
     }
